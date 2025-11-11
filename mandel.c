@@ -33,11 +33,12 @@ int main( int argc, char *argv[] )
 	int    image_width = 1000;
 	int    image_height = 1000;
 	int    max = 1000;
+	int    cprocesses = 1; // Amount of children processes default 1
 
 	// For each command line argument given,
 	// override the appropriate configuration value.
 
-	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h"))!=-1) {
+	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h:c"))!=-1) {
 		switch(c) 
 		{
 			case 'x':
@@ -65,6 +66,9 @@ int main( int argc, char *argv[] )
 				show_help();
 				exit(1);
 				break;
+			case 'c':
+			cprocesses = atoi(optarg);
+			break;
 		}
 	}
 
