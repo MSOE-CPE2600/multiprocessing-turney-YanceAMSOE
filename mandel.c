@@ -39,6 +39,7 @@ int main( int argc, char *argv[] )
 	// override the appropriate configuration value.
 
 	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h:c"))!=-1) {
+		
 		switch(c) 
 		{
 			case 'x':
@@ -72,6 +73,10 @@ int main( int argc, char *argv[] )
 		}
 	}
 
+	//My modification of adding child processes
+	for(int i = 1; i < cprocesses + 1; i++){
+	
+
 	// Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
 	yscale = xscale / image_width * image_height;
 
@@ -93,7 +98,9 @@ int main( int argc, char *argv[] )
 	// free the mallocs
 	freeRawImage(img);
 
+	}
 	return 0;
+
 }
 
 
@@ -164,9 +171,37 @@ Modify this function to make more interesting colors.
 */
 int iteration_to_color( int iters, int max )
 {
-	int color = 0xFFFFFF*iters/(double)max;
+	for(int i = 0; i < max; i++){	
+	int color = (int) RandHexa()*iters/(double)max;
 	return color;
+	}
 }
+
+//Generates a random Hexadecimal number
+void RandHexa(){
+	int maxSize = 10;
+	char hexChar[] =
+		{ '0', '1', '2', '3', '4', '5',
+            '6', '7', '8', '9', 'A', 'B',
+            'C', 'D', 'E', 'F' };
+	for (int i = 0; i < 6; i++) {
+
+		// Randomly select length of the
+		// int in the range [1, maxSize]
+		int len = rand() % maxSize + 1;
+		
+		// Print len characters
+		for (int j = 0; j < len; j++) {
+		
+			// Print a randomly selected
+			// character
+			int HexV = hexChar[rand() % 16];
+		}
+		return HexV;
+		}
+		
+	}
+
 
 
 // Show help message
@@ -182,6 +217,7 @@ void show_help()
 	printf("-H <pixels> Height of the image in pixels. (default=1000)\n");
 	printf("-o <file>   Set output file. (default=mandel.bmp)\n");
 	printf("-h          Show this help text.\n");
+	printf("-c          Set the amount of children processes you want to run. (default = 1)\n");
 	printf("\nSome examples are:\n");
 	printf("mandel -x -0.5 -y -0.5 -s 0.2\n");
 	printf("mandel -x -.38 -y -.665 -s .05 -m 100\n");
