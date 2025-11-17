@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+#include <math.h>
 #include "jpegrw.h"
 
 // local routines
@@ -17,10 +20,10 @@ static int iterations_at_point( double x, double y, int max );
 static void compute_image( imgRawImage *img, double xmin, double xmax,
 									double ymin, double ymax, int max );
 static void show_help();
+static int RandHex();
 
 
-int main( int argc, char *argv[] )
-{
+int main( int argc, char *argv[] ) {
 	char c;
 
 	// These are the default configuration values used
@@ -35,10 +38,13 @@ int main( int argc, char *argv[] )
 	int    max = 1000;
 	int    cprocesses = 1; // Amount of children processes default 1
 
+	//for the zoom factor for the mandle movie
+	double zoom_factor = 0.95;
+
 	// For each command line argument given,
 	// override the appropriate configuration value.
 
-	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h:c"))!=-1) {
+	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h:c:z"))!=-1) {
 		
 		switch(c) 
 		{
@@ -63,21 +69,25 @@ int main( int argc, char *argv[] )
 			case 'o':
 				outfile = optarg;
 				break;
+			case 'c':
+				cprocesses = atoi(optarg);
+				break;	
+			case 'z':
+				zoom_factor = atof(optarg);
+				break;
 			case 'h':
 				show_help();
 				exit(1);
 				break;
-			case 'c':
-			cprocesses = atoi(optarg);
-			break;
 		}
 	}
+	//time before the child process start
+	struct timeval start, end;
+	gettimeofday(&start, NULL);
 
-	//My modification of adding child processes
-	for(int i = 1; i < cprocesses + 1; i++){
 	
 
-	// Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
+	/* Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
 	yscale = xscale / image_width * image_height;
 
 	// Display the configuration of the image.
@@ -97,10 +107,15 @@ int main( int argc, char *argv[] )
 
 	// free the mallocs
 	freeRawImage(img);
-
-	}
 	return 0;
+    */
+	gettimeofday(&end, NULL);
 
+	double runtime = (end.tv_sec - start.tv_sec) + 
+					 (end.tv_usec - start.tv_usec) / 1e6;
+	
+	printf("Total runtime: %.3f sec with %d processes\n", runtime, cprocesses);
+	return 0;
 }
 
 
@@ -111,8 +126,7 @@ Return the number of iterations at point x, y
 in the Mandelbrot space, up to a maximum of max.
 */
 
-int iterations_at_point( double x, double y, int max )
-{
+int iterations_at_point( double x, double y, int max ) {
 	double x0 = x;
 	double y0 = y;
 
@@ -137,8 +151,7 @@ Compute an entire Mandelbrot image, writing each point to the given bitmap.
 Scale the image to the range (xmin-xmax,ymin-ymax), limiting iterations to "max"
 */
 
-void compute_image(imgRawImage* img, double xmin, double xmax, double ymin, double ymax, int max )
-{
+void compute_image(imgRawImage* img, double xmin, double xmax, double ymin, double ymax, int max ) {
 	int i,j;
 
 	int width = img->width;
@@ -169,46 +182,35 @@ Convert a iteration number to a color.
 Here, we just scale to gray with a maximum of imax.
 Modify this function to make more interesting colors.
 */
-int iteration_to_color( int iters, int max )
-{
-	for(int i = 0; i < max; i++){	
-	int color = (int) RandHexa()*iters/(double)max;
-	return color;
+int iteration_to_color( int iters, int max ) {
+	if(iters >= max) {
+		return 0x000000; // base set black
 	}
+
+	int base = RandHex();
+	double t = (double) iters / max;
+
+	int r = ((base>>16)&0xFF) * t;
+	int g = ((base>>8)&0xFF) * t;
+	int b = (base&0xFF) * t;
+	
+	return (r<<16) | (g<<8) | b;
+		
 }
 
-//Generates a random Hexadecimal number
-void RandHexa(){
-	int maxSize = 10;
-	char hexChar[] =
-		{ '0', '1', '2', '3', '4', '5',
-            '6', '7', '8', '9', 'A', 'B',
-            'C', 'D', 'E', 'F' };
-	for (int i = 0; i < 6; i++) {
+//We have to make 0xFFFFFF a random number from 0 to 16777215
+int RandHex(){
+// 	(rgb&0xFF0000)>>16,(rgb&0xFF00)>>8,rgb&0xFF) is how the other program convers the hex value to get the colors
+	return rand() % 0xFFFFFF;
 
-		// Randomly select length of the
-		// int in the range [1, maxSize]
-		int len = rand() % maxSize + 1;
-		
-		// Print len characters
-		for (int j = 0; j < len; j++) {
-		
-			// Print a randomly selected
-			// character
-			int HexV = hexChar[rand() % 16];
-		}
-		return HexV;
-		}
-		
-	}
+}
 
 
 
 // Show help message
-void show_help()
-{
+void show_help() {
 	printf("Use: mandel [options]\n");
-	printf("Where options are:\n");
+	printf("Options For Mandel:\n");
 	printf("-m <max>    The maximum number of iterations per point. (default=1000)\n");
 	printf("-x <coord>  X coordinate of image center point. (default=0)\n");
 	printf("-y <coord>  Y coordinate of image center point. (default=0)\n");
