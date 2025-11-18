@@ -32,7 +32,7 @@ int main( int argc, char *argv[] ) {
 	double xcenter = 0;
 	double ycenter = 0;
 	double xscale = 4;
-	double yscale = 0; // calc later
+	// double yscale = 0; // calc later
 	int    image_width = 1000;
 	int    image_height = 1000;
 	int    max = 1000;
@@ -85,30 +85,66 @@ int main( int argc, char *argv[] ) {
 	struct timeval start, end;
 	gettimeofday(&start, NULL);
 
-	
+	//Set the variable for amount of frams
+	int TFrames = 50; //Total Frames
 
-	/* Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
-	yscale = xscale / image_width * image_height;
+	// fork this amount of children 
+	for (int child = 0; child <cprocesses; child++) {
 
-	// Display the configuration of the image.
-	printf("mandel: x=%lf y=%lf xscale=%lf yscale=%1f max=%d outfile=%s\n",xcenter,ycenter,xscale,yscale,max,outfile);
+		pid_t pid = fork();
 
-	// Create a raw image of the appropriate size.
-	imgRawImage* img = initRawImage(image_width,image_height);
+		if (pid < 0) {
+			perror("fork failed");
+			exit(1);
+		}
 
-	// Fill it with a black
-	setImageCOLOR(img,0);
+		if (pid == 0) {
+			srand(getpid());
+			
+			for(int frame = child; frame < TFrames; frame += cprocesses) {
+				// Scale changes each frame for zoom animation
 
-	// Compute the Mandelbrot image
-	compute_image(img,xcenter-xscale/2,xcenter+xscale/2,ycenter-yscale/2,ycenter+yscale/2,max);
+				/* Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
+				yscale = xscale / image_width * image_height; */ 
+				double frame_xscale = xscale * pow(zoom_factor, frame);
+				double frame_yscale = frame_xscale / image_width * image_height;
 
-	// Save the image in the stated file.
-	storeJpegImageFile(img,outfile);
+				double xmin = xcenter - frame_xscale/2;
+				double xmax = xcenter + frame_xscale/2;
+				double ymin = ycenter - frame_yscale/2;
+				double ymax = ycenter + frame_yscale/2;
 
-	// free the mallocs
-	freeRawImage(img);
-	return 0;
-    */
+				// Create output filename
+				char framefile[256];
+				snprintf(framefile, sizeof(framefile), "%s_%03d.jpg", outfile, frame);
+
+				printf("Child %d PID=%d → %s\n", child, getpid(), framefile);
+
+				// Display the configuration of the image.
+				printf("mandel: x=%lf y=%lf xscale=%lf yscale=%1f max=%d outfile=%s\n",
+					xcenter, ycenter, frame_xscale, frame_yscale, max, framefile);
+
+				// Create a raw image of the appropriate size.
+				imgRawImage* img = initRawImage(image_width, image_height);
+
+				// Fill it with a black
+				setImageCOLOR(img,0);
+
+				// Compute the Mandelbrot image
+				compute_image(img, xmin, xmax, ymin, ymax, max);
+
+				// Save the image in the stated file.
+				storeJpegImageFile(img, framefile);
+
+				// free the mallocs
+				freeRawImage(img);
+			}
+			_exit(0);
+		}
+	}
+
+	int parentWait;
+	while(wait(&parentWait) > 0);
 	gettimeofday(&end, NULL);
 
 	double runtime = (end.tv_sec - start.tv_sec) + 
@@ -136,7 +172,6 @@ int iterations_at_point( double x, double y, int max ) {
 
 		double xt = x*x - y*y + x0;
 		double yt = 2*x*y + y0;
-
 		x = xt;
 		y = yt;
 
