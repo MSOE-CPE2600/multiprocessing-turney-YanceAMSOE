@@ -20,7 +20,7 @@ static int iterations_at_point( double x, double y, int max );
 static void compute_image( imgRawImage *img, double xmin, double xmax,
 									double ymin, double ymax, int max );
 static void show_help();
-static int RandHex();
+//static int RandHex();
 
 
 int main( int argc, char *argv[] ) {
@@ -28,18 +28,18 @@ int main( int argc, char *argv[] ) {
 
 	// These are the default configuration values used
 	// if no command line arguments are given.
-	const char *outfile = "mandel.jpg";
+	const char *outfile = "mandel";
 	double xcenter = 0;
 	double ycenter = 0;
 	double xscale = 4;
 	// double yscale = 0; // calc later
-	int    image_width = 1000;
-	int    image_height = 1000;
+	int    image_width = 720;
+	int    image_height = 480;
 	int    max = 1000;
 	int    cprocesses = 1; // Amount of children processes default 1
 
 	//for the zoom factor for the mandle movie
-	double zoom_factor = 0.95;
+	double zoom_factor = 1.02;
 
 	// For each command line argument given,
 	// override the appropriate configuration value.
@@ -99,24 +99,24 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (pid == 0) {
-			srand(getpid());
-			
 			for(int frame = child; frame < TFrames; frame += cprocesses) {
 				// Scale changes each frame for zoom animation
+				// Each frame zooms in from the previous one by dividing by zoom_factor
+				// Frame 0: full scale, Frame 1: scale/zoom_factor, Frame 2: scale/zoom_factor^2, etc.
+				double frame_xscale = xscale / pow(zoom_factor, frame);
+				
+				// Calculate y scale to maintain aspect ratio (preserve image proportions)
+				double frame_yscale = frame_xscale * image_height / image_width;
 
-				/* Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
-				yscale = xscale / image_width * image_height; */ 
-				double frame_xscale = xscale * pow(zoom_factor, frame);
-				double frame_yscale = frame_xscale / image_width * image_height;
+				// Calculate coordinate bounds centered on (xcenter, ycenter)
+				double xmin = xcenter - frame_xscale / 2.0;
+				double xmax = xcenter + frame_xscale / 2.0;
+				double ymin = ycenter - frame_yscale / 2.0;
+				double ymax = ycenter + frame_yscale / 2.0;
 
-				double xmin = xcenter - frame_xscale/2;
-				double xmax = xcenter + frame_xscale/2;
-				double ymin = ycenter - frame_yscale/2;
-				double ymax = ycenter + frame_yscale/2;
-
-				// Create output filename
+				// Create output filename with zero-padding for video tools
 				char framefile[256];
-				snprintf(framefile, sizeof(framefile), "%s_%03d.jpg", outfile, frame);
+				snprintf(framefile, sizeof(framefile), "%s%03d.jpg", outfile, frame);
 
 				printf("Child %d PID=%d → %s\n", child, getpid(), framefile);
 
@@ -192,7 +192,7 @@ void compute_image(imgRawImage* img, double xmin, double xmax, double ymin, doub
 	int width = img->width;
 	int height = img->height;
 
-	// For every pixel in the image...
+	// For every pixel
 
 	for(j=0;j<height;j++) {
 
@@ -213,33 +213,26 @@ void compute_image(imgRawImage* img, double xmin, double xmax, double ymin, doub
 
 
 /*
-Convert a iteration number to a color.
-Here, we just scale to gray with a maximum of imax.
-Modify this function to make more interesting colors.
+Convert an iteration number to a color.
+Points that never escape (iters >= max) are black so the Mandelbrot shape is visible.
+Other points get a smooth, colorful gradient based on escape speed.
 */
-int iteration_to_color( int iters, int max ) {
-	if(iters >= max) {
-		return 0x000000; // base set black
-	}
-
-	int base = RandHex();
-	double t = (double) iters / max;
-
-	int r = ((base>>16)&0xFF) * t;
-	int g = ((base>>8)&0xFF) * t;
-	int b = (base&0xFF) * t;
-	
-	return (r<<16) | (g<<8) | b;
+int iteration_to_color( int iters, int max )
+{
+	for(int i = 0; i < max; i++){
 		
+	int color = 0x3333FF + (0xFFFFFF*iters/(double)max); //Variable used to be 0xFFFFFF
+	return color;
+	}
+	return rand() * 0xFFFFFF;
 }
 
 //We have to make 0xFFFFFF a random number from 0 to 16777215
-int RandHex(){
+//int RandHex(){
 // 	(rgb&0xFF0000)>>16,(rgb&0xFF00)>>8,rgb&0xFF) is how the other program convers the hex value to get the colors
-	return rand() % 0xFFFFFF;
+//	return rand() % 0xFFFFFF;
 
-}
-
+//}
 
 
 // Show help message
