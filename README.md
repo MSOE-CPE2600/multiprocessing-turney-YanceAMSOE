@@ -11,3 +11,9 @@ For my lab itself I have had issues with my computer running the mandel so to co
 ffmpeg -i mandel%3d.jpg mandel.mpg       (I do %3D)
 
 then to run it I use ffplay mandel.mpg
+
+
+
+for lab 12 
+![](LAB12CPE2600.png)
+This is the graph for processes and threads
